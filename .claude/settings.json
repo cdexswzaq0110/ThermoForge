@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(/.env)",
+      "Read(/.env.*)",
+      "Read(/**/.env)",
+      "Read(/**/.env.*)",
+      "Read(/secrets/**)",
+      "Read(/**/secrets/**)",
+      "Read(/credentials/**)",
+      "Read(/**/credentials/**)",
+      "Read(/**/id_rsa)",
+      "Read(/**/id_ed25519)",
+      "Read(/**/.aws/credentials)",
+      "Read(/**/.ssh/**)",
+      "Read(/config/credentials.json)",
+      "Read(/**/config/credentials.json)",
+      "Read(/.claude/settings.local.json)",
+      "Edit(/.env)",
+      "Edit(/.env.*)",
+      "Edit(/**/.env)",
+      "Edit(/**/.env.*)",
+      "Edit(/secrets/**)",
+      "Edit(/**/secrets/**)",
+      "Edit(/credentials/**)",
+      "Edit(/**/credentials/**)",
+      "Edit(/**/.ssh/**)",
+      "Edit(/config/credentials.json)",
+      "Edit(/**/config/credentials.json)",
+      "Edit(/.claude/settings.local.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-branch.sh\"",
+            "timeout": 5,
+            "statusMessage": "檢查分支保護"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-branch.sh\"",
+            "timeout": 5,
+            "statusMessage": "檢查分支保護"
+          },
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-router.sh\"",
+            "timeout": 10,
+            "statusMessage": "檢查 Router 一致性"
+          },
+          {
+            "type": "command",
+            "if": "Bash(git *)",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-critical.sh\"",
+            "timeout": 5,
+            "statusMessage": "檢查 backup tag"
+          }
+        ]
+      }
+    ]
+  }
+}
