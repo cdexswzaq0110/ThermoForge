@@ -1,0 +1,79 @@
+{
+  "run_id": "unet_residual_s1",
+  "created_utc": "2026-09-07T03:40:09Z",
+  "git_commit": "a85ac83+dirty",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "unet",
+    "variant": "residual",
+    "epochs": 25,
+    "batch_size": 32,
+    "lr": 0.002,
+    "base_channels": 32,
+    "under_weight": 1.0,
+    "seed": 1,
+    "folds": 5
+  },
+  "hypothesis": "residual 對 norm 的領先跨 seed 穩定",
+  "main_change": "seed 0 -> 1",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 0.04433812284072488,
+      "field_rmse": 0.08363246688948317,
+      "field_max_abs": 18.145695173400085,
+      "tmax_mae": 0.17532065574366343,
+      "tmax_bias": -0.003316500133800139,
+      "under_rate": 0.007222222222222222,
+      "under_p95": 0.39187484993114957
+    },
+    "oof_per_fold_tmax_mae": [
+      0.14171881586535126,
+      0.17193082455432096,
+      0.1947927939616691,
+      0.17134984008877907,
+      0.19681100424819678
+    ],
+    "oof_fold_noise_std": 0.019986701685332973,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 0.030840330314819524,
+      "field_rmse": 0.06125116274381899,
+      "field_max_abs": 6.804494745166949,
+      "tmax_mae": 0.1455649909481805,
+      "tmax_bias": 0.0022062491792589137,
+      "under_rate": 0.0075,
+      "under_p95": 0.30375621714586587
+    },
+    "screening_recall_mean": 0.9899999999999999,
+    "screening_recall_std": 0.029999999999999995,
+    "inference_ms_per_layout": 0.35346283333637984,
+    "oof_seconds": 285.2
+  },
+  "wall_seconds": 357.7,
+  "decision": "pending"
+}

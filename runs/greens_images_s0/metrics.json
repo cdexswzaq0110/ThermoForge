@@ -1,0 +1,73 @@
+{
+  "run_id": "greens_images_s0",
+  "created_utc": "2026-09-07T03:02:25Z",
+  "git_commit": "207c977+dirty",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "greens_images",
+    "seed": 0,
+    "folds": 5
+  },
+  "hypothesis": "一階鏡像源補掉自由空間解系統性低估的受限誤差",
+  "main_change": "images=0 -> images=1",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 5.251860181555548,
+      "field_rmse": 7.673370380323635,
+      "field_max_abs": 45.858911348862065,
+      "tmax_mae": 5.927390579832841,
+      "tmax_bias": -5.927390579832841,
+      "under_rate": 0.9016666666666666,
+      "under_p95": 17.35376099991483
+    },
+    "oof_per_fold_tmax_mae": [
+      5.147108329874181,
+      5.945834464614303,
+      5.752649892853376,
+      6.08089350496783,
+      6.710466706854513
+    ],
+    "oof_fold_noise_std": 0.5052694811501475,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 4.221545996226582,
+      "field_rmse": 5.757882297263986,
+      "field_max_abs": 31.94882575729116,
+      "tmax_mae": 4.910776245555229,
+      "tmax_bias": -4.910776245555229,
+      "under_rate": 0.9466666666666667,
+      "under_p95": 13.743987079661395
+    },
+    "screening_recall_mean": 0.8499999999999999,
+    "screening_recall_std": 0.10246950765959598,
+    "inference_ms_per_layout": 28.114835333338608,
+    "oof_seconds": 104.24
+  },
+  "wall_seconds": 138.3,
+  "decision": "pending"
+}

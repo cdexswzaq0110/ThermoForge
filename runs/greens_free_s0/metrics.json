@@ -1,0 +1,73 @@
+{
+  "run_id": "greens_free_s0",
+  "created_utc": "2026-09-07T03:00:05Z",
+  "git_commit": "207c977+dirty",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "greens_free",
+    "seed": 0,
+    "folds": 5
+  },
+  "hypothesis": "自由空間 Green's 疊加在遠離邊界處近似成立",
+  "main_change": "改用 K0 疊加取代平均場",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 14.645546707131015,
+      "field_rmse": 18.40116850456691,
+      "field_max_abs": 87.81889072731458,
+      "tmax_mae": 18.86256949417108,
+      "tmax_bias": -18.86256949417108,
+      "under_rate": 0.9952777777777778,
+      "under_p95": 44.504529083999934
+    },
+    "oof_per_fold_tmax_mae": [
+      16.63002090821109,
+      18.72153221425735,
+      19.146201911025894,
+      19.056380064009836,
+      20.758712373351234
+    ],
+    "oof_fold_noise_std": 1.320419055159016,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 11.905389010312815,
+      "field_rmse": 15.015336928713463,
+      "field_max_abs": 95.55843889004714,
+      "tmax_mae": 15.980509520945143,
+      "tmax_bias": -15.980509520945143,
+      "under_rate": 1.0,
+      "under_p95": 38.12715456461124
+    },
+    "screening_recall_mean": 0.16,
+    "screening_recall_std": 0.12000000000000001,
+    "inference_ms_per_layout": 2.7893791666671555,
+    "oof_seconds": 10.3
+  },
+  "wall_seconds": 14.0,
+  "decision": "pending"
+}

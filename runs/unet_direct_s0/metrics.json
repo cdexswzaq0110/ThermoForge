@@ -1,0 +1,79 @@
+{
+  "run_id": "unet_direct_s0",
+  "created_utc": "2026-09-07T03:08:39Z",
+  "git_commit": "207c977+dirty",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "unet",
+    "variant": "direct",
+    "epochs": 25,
+    "batch_size": 32,
+    "lr": 0.002,
+    "base_channels": 32,
+    "under_weight": 1.0,
+    "seed": 0,
+    "folds": 5
+  },
+  "hypothesis": "對照組：不做物理無因次化，只用 training fold 統計量標準化",
+  "main_change": "輸入改回原始功率圖 + kt/h/Lx/Ly",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 0.3400667431180735,
+      "field_rmse": 0.5305239500693241,
+      "field_max_abs": 40.86895212625224,
+      "tmax_mae": 0.9187017365967184,
+      "tmax_bias": 0.044740195945976335,
+      "under_rate": 0.1313888888888889,
+      "under_p95": 2.0703061365540782
+    },
+    "oof_per_fold_tmax_mae": [
+      0.8562191079748287,
+      0.9373276490971103,
+      1.00369662240717,
+      0.8280265783919879,
+      0.9682387251124952
+    ],
+    "oof_fold_noise_std": 0.06655979515679124,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 0.2351487513844737,
+      "field_rmse": 0.37870556300232566,
+      "field_max_abs": 32.499415232720864,
+      "tmax_mae": 0.682427582313962,
+      "tmax_bias": 0.07689375335120822,
+      "under_rate": 0.0875,
+      "under_p95": 1.7791596788310287
+    },
+    "screening_recall_mean": 0.9149999999999998,
+    "screening_recall_std": 0.05722761571129797,
+    "inference_ms_per_layout": 0.29566799999884097,
+    "oof_seconds": 295.69
+  },
+  "wall_seconds": 369.2,
+  "decision": "pending"
+}

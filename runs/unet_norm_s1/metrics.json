@@ -1,0 +1,79 @@
+{
+  "run_id": "unet_norm_s1",
+  "created_utc": "2026-09-07T03:34:06Z",
+  "git_commit": "a85ac83+dirty",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "unet",
+    "variant": "norm",
+    "epochs": 25,
+    "batch_size": 32,
+    "lr": 0.002,
+    "base_channels": 32,
+    "under_weight": 1.0,
+    "seed": 1,
+    "folds": 5
+  },
+  "hypothesis": "norm 的分數跨 seed 穩定",
+  "main_change": "seed 0 -> 1",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 0.18778387931733537,
+      "field_rmse": 0.3144959898006938,
+      "field_max_abs": 46.78557844601583,
+      "tmax_mae": 0.46004888335579147,
+      "tmax_bias": -0.016003581762557083,
+      "under_rate": 0.05638888888888889,
+      "under_p95": 1.0872357000405186
+    },
+    "oof_per_fold_tmax_mae": [
+      0.37653608913826225,
+      0.4200384049399386,
+      0.5912456161800755,
+      0.3987839614540073,
+      0.5136403450666737
+    ],
+    "oof_fold_noise_std": 0.08051489714182346,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 0.13152427736592945,
+      "field_rmse": 0.2296831517193338,
+      "field_max_abs": 27.378281003126858,
+      "tmax_mae": 0.33069066559422516,
+      "tmax_bias": -0.018978846806358956,
+      "under_rate": 0.025,
+      "under_p95": 0.7912182450538597
+    },
+    "screening_recall_mean": 0.975,
+    "screening_recall_std": 0.043301270189221926,
+    "inference_ms_per_layout": 0.2833414166707371,
+    "oof_seconds": 302.05
+  },
+  "wall_seconds": 374.8,
+  "decision": "pending"
+}

@@ -1,0 +1,79 @@
+{
+  "run_id": "unet_residual_s0",
+  "created_utc": "2026-09-07T03:21:18Z",
+  "git_commit": "a85ac83",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "unet",
+    "variant": "residual",
+    "epochs": 25,
+    "batch_size": 32,
+    "lr": 0.002,
+    "base_channels": 32,
+    "under_weight": 1.0,
+    "seed": 0,
+    "folds": 5
+  },
+  "hypothesis": "學物理基準的殘差比從零學整個場容易，且低估率會降",
+  "main_change": "norm -> residual（唯一改動：目標改成 theta_norm - greens）",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 0.041644921616859475,
+      "field_rmse": 0.07600178220645037,
+      "field_max_abs": 15.271098477515181,
+      "tmax_mae": 0.14444380286505518,
+      "tmax_bias": 0.021958879988457223,
+      "under_rate": 0.0022222222222222222,
+      "under_p95": 0.3078957578870828
+    },
+    "oof_per_fold_tmax_mae": [
+      0.13239379558837766,
+      0.14872884446688914,
+      0.15287109806614144,
+      0.13562964414851936,
+      0.1525956320553483
+    ],
+    "oof_fold_noise_std": 0.008703163497621765,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 0.02843913455204716,
+      "field_rmse": 0.05618753916993309,
+      "field_max_abs": 6.765305572959662,
+      "tmax_mae": 0.12029668560023893,
+      "tmax_bias": 0.01397197946080519,
+      "under_rate": 0.005,
+      "under_p95": 0.26658221113289143
+    },
+    "screening_recall_mean": 1.0,
+    "screening_recall_std": 0.0,
+    "inference_ms_per_layout": 0.29876275000181823,
+    "oof_seconds": 304.41
+  },
+  "wall_seconds": 379.3,
+  "decision": "pending"
+}

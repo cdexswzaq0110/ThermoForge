@@ -1,0 +1,79 @@
+{
+  "run_id": "unet_norm_s0",
+  "created_utc": "2026-09-07T03:14:54Z",
+  "git_commit": "2848af7+dirty",
+  "data": {
+    "npz": "data\\processed\\v1.npz",
+    "sha256": {
+      "base_id": "c4e683f5dc9c82b5",
+      "energy_residual": "0146f82f596e799f",
+      "fold": "ec473dea4f76d322",
+      "h_conv": "efc7eb76cf3e43af",
+      "kt": "854439e89fb5feb2",
+      "lx": "dbde81025ff3a696",
+      "ly": "38a800d2e15e6720",
+      "n_components": "dc8d4241068c37cc",
+      "power_map": "98488a00c79a7c3b",
+      "regime_code": "610b5c0662cdc8a8",
+      "t_amb": "d07599f95e24dd47",
+      "temperature": "c6e80a6c69f2f432",
+      "theta_avg": "f585a62996bdc022",
+      "total_power": "4a692ee37cd6d8da"
+    },
+    "pools": "data\\processed\\pools_v1.npz"
+  },
+  "env": {
+    "python": "3.11.15",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "config": {
+    "model": "unet",
+    "variant": "norm",
+    "epochs": 25,
+    "batch_size": 32,
+    "lr": 0.002,
+    "base_channels": 32,
+    "under_weight": 1.0,
+    "seed": 0,
+    "folds": 5
+  },
+  "hypothesis": "以 theta_ref 與 m*L 無因次化之後，網路只需學形狀函數",
+  "main_change": "direct -> norm（唯一改動：輸入與目標的無因次化）",
+  "note": "",
+  "result": {
+    "oof": {
+      "n": 3600,
+      "field_mae": 0.18487009470452404,
+      "field_rmse": 0.3140465126662657,
+      "field_max_abs": 49.4537353951914,
+      "tmax_mae": 0.4793958104458789,
+      "tmax_bias": -0.029590771747308363,
+      "under_rate": 0.06111111111111111,
+      "under_p95": 1.1847609450339454
+    },
+    "oof_per_fold_tmax_mae": [
+      0.40391643044436243,
+      0.5215307923286496,
+      0.6011987050143356,
+      0.4147741671316166,
+      0.4555589573104303
+    ],
+    "oof_fold_noise_std": 0.07355622472770881,
+    "pool_dev": {
+      "n": 1200,
+      "field_mae": 0.12682050336569015,
+      "field_rmse": 0.22369466858991782,
+      "field_max_abs": 27.25868954253818,
+      "tmax_mae": 0.3675218723693979,
+      "tmax_bias": 0.019651791187041894,
+      "under_rate": 0.03166666666666667,
+      "under_p95": 0.8437739993097202
+    },
+    "screening_recall_mean": 0.97,
+    "screening_recall_std": 0.04582575694955839,
+    "inference_ms_per_layout": 0.3152363333295701,
+    "oof_seconds": 295.9
+  },
+  "wall_seconds": 371.0,
+  "decision": "pending"
+}
