@@ -17,6 +17,7 @@
 | [L0002](0002-physical-plausibility-belongs-in-the-parameterisation.md) | 合成資料的合理性在參數化裡解決，過濾會洩漏 target | 合成資料, 取樣設計 | useful | 0 |
 | [L0003](0003-bootstrap-template-and-checker-disagree.md) | Serendipity 的 CONTEXT 模板過不了自己的驗收腳本 | serendipity, 上游缺陷 | useful | 0 |
 | [L0004](0004-integral-properties-are-learned-local-ones-are-not.md) | 代理模型學得到積分性質，學不到局部微分性質 | physics-ml, 代理模型 | useful | 0 |
+| [L0005](0005-a-project-does-not-modify-its-tooling.md) | 專案 session 不改工具 repo，即使缺陷是在這裡撞到的 | 邊界, 上游, 授權 | corrected | 0 |
 
 ## 已升級（`outcome: promoted`）
 
@@ -34,6 +35,6 @@
 
 ## 統計
 
-- 現行：4 則
-- 距離下次回顧：16 則（滿 20 則觸發）
+- 現行：5 則
+- 距離下次回顧：15 則（滿 20 則觸發）
 - `no-trigger`（沒填失效條件）：0 則

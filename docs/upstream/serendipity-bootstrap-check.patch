@@ -1,0 +1,369 @@
+From 86f12ef6245db2419d4cc96ada6054d527ab9584 Mon Sep 17 00:00:00 2001
+From: TerryHC <cdexswzaq0110@gmail.com>
+Date: Mon, 7 Sep 2026 16:44:35 +0800
+Subject: [PATCH] fix(bootstrap): let bootstrap_check eat its own CONTEXT
+ template
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+照 templates/CONTEXT.md 填出來的檔案，過不了 templates/_meta/bootstrap_check.sh。
+
+腳本數的是以 | 開頭的行（要求 >= 5，也就是要一張表格），而模板的 Language
+段落寫的是散文，grep -c '^|' 回傳 0。兩份檔案分別寫、沒有任何機制要求一致，
+於是漂掉了——而且兩邊看起來都很正常。第一次帶進真實專案沒撞到，
+是因為那個專案自己改用了表格，不是因為模板對。
+
+修法選了「腳本放寬」而不是「模板改表格」：改模板會讓已經照舊格式寫過
+CONTEXT.md 的專案在下次跑檢查時突然變紅，而它們沒有做錯任何事。
+判準的缺陷不該由使用者付代價。
+
+- count_terms 兩種形狀都算（行首粗體詞條、表格資料列），門檻改成 3，
+  對齊腳本自己那句「至少填三到五個詞」
+- 新增 --selftest：拿模板原樣建 fixture 跑一般模式（綠燈）、
+  詞條不足的必須被擋（紅燈）、表格式也要認得。沒看過紅燈的檢查不算裝好
+- 模板補第三個詞條槽位（原本兩個，與「三到五個」自相矛盾），
+  並示範等價的表格寫法
+- se-bootstrap 的「腳本判不了」從兩項變三項：CONTEXT.md 裡的是不是真的詞，
+  腳本數的是形狀，判不了內容
+- L0006
+
+description frontmatter 未改動，因此不需要跑觸發測試（維護契約 #8）。
+bootstrap_check.sh --selftest 3/3，hooks/selftest.sh 22/22，
+對 ThermoForge（表格式）回歸 8/8。
+---
+ .claude/skills/se-bootstrap/SKILL.md          | 15 ++-
+ ...06-let-the-checker-eat-its-own-template.md | 87 ++++++++++++++++
+ docs/lessons/INDEX.md                         |  5 +-
+ templates/CONTEXT.md                          | 16 +++
+ templates/_meta/bootstrap_check.sh            | 99 ++++++++++++++++++-
+ templates/_meta/new_project_bootstrap.md      |  5 +
+ 6 files changed, 220 insertions(+), 7 deletions(-)
+ create mode 100644 docs/lessons/0006-let-the-checker-eat-its-own-template.md
+
+diff --git a/.claude/skills/se-bootstrap/SKILL.md b/.claude/skills/se-bootstrap/SKILL.md
+index 6fb182e..1a47e93 100644
+--- a/.claude/skills/se-bootstrap/SKILL.md
++++ b/.claude/skills/se-bootstrap/SKILL.md
+@@ -64,10 +64,21 @@ bash templates/_meta/bootstrap_check.sh <新專案路徑>
+ 八項檢查，任一不過 exit 1。**核取方塊靠人記得，腳本不會忘**——這份清單原本是七個方塊，
+ 第一次被真的執行時就漏掉了最重要的那一條（版控）。
+ 
+-腳本判不了、要人自己確認的兩項：
++改過這支腳本或 `templates/CONTEXT.md` 之後，跑一次自測：
++
++```bash
++bash templates/_meta/bootstrap_check.sh --selftest
++```
++
++它拿模板自己去餵腳本，並驗一次紅燈。**這一條是撞出來才加的**——舊版腳本只數表格列，
++而模板寫的是散文，照著填一律不及格（`docs/lessons/0006`）。
++
++腳本判不了、要人自己確認的三項：
+ 
+ - 專案的 `CLAUDE.md` 只放環境查不到的東西
+ - 新專案裡用不到的 templates 已刪掉
++- `CONTEXT.md` 裡的是**真的詞**，不是模板留下來的 `<詞>` 預留位——
++  腳本數的是形狀，判不了內容
+ 
+ ## 兩種安裝方式，選一種
+ 
+@@ -82,5 +93,5 @@ bash templates/_meta/bootstrap_check.sh <新專案路徑>
+ 
+ - `bootstrap_check.sh` 八項全過
+ - 專案 `CLAUDE.md` 的「實際指令」表只寫環境查不到的
+-- `CONTEXT.md` 有三到五個真的會用到的詞
++- `CONTEXT.md` 有三到五個真的會用到的詞（散文或表格都可以，腳本兩種都認）
+ - 第一輪之後跑一次消融（見 `.claude/ABLATION.md`）——繼承來的規則有一部分是在補一個已經不存在的模型缺陷
+diff --git a/docs/lessons/0006-let-the-checker-eat-its-own-template.md b/docs/lessons/0006-let-the-checker-eat-its-own-template.md
+new file mode 100644
+index 0000000..6d112e3
+--- /dev/null
++++ b/docs/lessons/0006-let-the-checker-eat-its-own-template.md
+@@ -0,0 +1,87 @@
++---
++id: L0006
++date: 2026-09-07
++outcome: useful
++tags: [模板, 驗收腳本, bootstrap, 一致性]
++anchors:
++  - templates/_meta/bootstrap_check.sh
++  - templates/CONTEXT.md
++  - .claude/skills/se-bootstrap/SKILL.md
++supersedes:
++hits: 0
++generalizes_to: 任何「模板 ＋ 驗收腳本」成對出現的地方
++validated:
++---
++
++# 讓驗收腳本吃一次自己的模板——不然兩邊會漂，而且兩邊看起來都正常
++
++## 觸發情境
++
++一個模板（要人照著填）配一支驗收腳本（檢查填完的結果）。
++本 repo 裡是 `templates/CONTEXT.md` ＋ `templates/_meta/bootstrap_check.sh`；
++同樣的形狀還有 PR 模板配 CI 檢查、issue 模板配 label 規則、schema 配 validator。
++
++## 領悟
++
++**照著模板填出來的檔案，過不了模板自己的驗收腳本。**
++
++`bootstrap_check.sh` 判 `CONTEXT.md` 是否夠充實的方式是數以 `|` 開頭的行
++（`grep -c '^|'`），要求 ≥ 5——也就是**要一張表格**。
++
++而 `templates/CONTEXT.md` 的 Language 段落用的是散文格式：
++
++```markdown
++**<詞>**：
++<一句話定義>
++_避免_：<舊叫法>
++```
++
++照著填，`grep -c '^|'` 回傳 **0**【已確認：2026-09-07 對模板實測，八項檢查失敗一項，exit 1】。
++
++第一次把這套配置帶進真實專案（ThermoForge）時之所以沒撞到，
++是因為那個專案自己改用了表格——**不是因為模板對**。
++
++## 為什麼會撞到
++
++錯誤假設是：**模板與驗收腳本是同一份規格的兩種表達，所以會一致。**
++
++它們是分別寫的，而且沒有任何機制要求一致。腳本的檔頭註解寫得很清楚
++「核取方塊靠人記得，腳本不會忘」——完全正確，但**腳本自己也需要一個東西
++來確認它量的是模板真的會產出的形狀**。
++
++這與 [L0003](0003-eval-harness-pitfalls.md)（量尺自己要先被量）是同一族，
++但更具體：那則講的是量測工具的第一個數字通常在量工具本身；
++這則講的是**成對的兩份文件會各自漂移，而且看起來都是對的**。
++與 [L0005](0005-your-checker-is-the-first-suspect.md) 也相鄰——
++系統說壞了的時候第一個嫌疑犯是判定條件；這裡是**系統說好了的時候，
++第一個嫌疑犯是判定條件從來沒被餵過真正的輸入**。
++
++## 下次怎麼做
++
++**任何「模板 ＋ 驗收腳本」成對出現的地方，加一個把模板本身餵給腳本的測試。**
++
++本 repo 的落地：
++
++```bash
++bash templates/_meta/bootstrap_check.sh --selftest
++```
++
++它做三件事，缺一不可：
++
++1. 拿 `templates/CONTEXT.md` **原樣**建一份 fixture，跑一般模式，**必須通過**。
++2. 拿一份詞條不足的 CONTEXT.md，**必須被擋**（沒看過紅燈的檢查不算裝好，L0002）。
++3. 拿一份表格式的，**也必須通過**（判準放寬成兩種形狀都算，不是強迫大家改用表格）。
++
++修的時候有兩個選項，選了「腳本放寬」而不是「模板改表格」：
++改模板會讓已經照舊格式寫過 `CONTEXT.md` 的專案在下次跑檢查時突然變紅，
++而它們沒有做錯任何事。**判準的缺陷不該由使用者付代價。**
++
++順帶一提：ThermoForge 用表格之後發現「避免的舊叫法」那一欄比預期有用——
++它逼你寫下**被取代掉的那個名字**，而那正是歧義的來源。所以模板現在兩種形狀都示範。
++
++## 失效條件
++
++- `bootstrap_check.sh` 改成不檢查 `CONTEXT.md` 的充實度——這一則的具體案例失效，
++  但「讓腳本吃自己的模板」那一句仍然成立。
++- 若之後改用 schema 驗證（JSON Schema、frontmatter 驗證器）取代 grep，
++  第 1、3 點要重寫；第 2 點（要看過紅燈）永遠成立。
+diff --git a/docs/lessons/INDEX.md b/docs/lessons/INDEX.md
+index 0b8d4fa..087b8ff 100644
+--- a/docs/lessons/INDEX.md
++++ b/docs/lessons/INDEX.md
+@@ -13,6 +13,7 @@
+ | [L0003](0003-eval-harness-pitfalls.md) | 量尺自己要先被量：第一個數字通常在量工具 | eval, 量測, 方法論 | useful | 0 |
+ | [L0004](0004-powershell-destroys-utf8-source.md) | 不要用 PowerShell 讀寫原始碼——會不可逆毀掉非 ASCII | windows, 編碼, 工具選擇 | useful | 0 |
+ | [L0005](0005-your-checker-is-the-first-suspect.md) | 系統說壞了的時候，第一個嫌疑犯是你的判定條件 | 量測, 判定, 除錯 | useful | 0 |
++| [L0006](0006-let-the-checker-eat-its-own-template.md) | 讓驗收腳本吃一次自己的模板，不然兩邊會漂 | 模板, 驗收腳本, 一致性 | useful | 0 |
+ 
+ ## 已升級（`outcome: promoted`）
+ 
+@@ -32,6 +33,6 @@
+ 
+ ## 統計
+ 
+-- 現行：5 則
+-- 距離下次回顧：15 則（滿 20 則觸發）
++- 現行：6 則
++- 距離下次回顧：14 則（滿 20 則觸發）
+ - `no-trigger`（沒填失效條件）：0 則
+diff --git a/templates/CONTEXT.md b/templates/CONTEXT.md
+index 2b7b740..67a6f51 100644
+--- a/templates/CONTEXT.md
++++ b/templates/CONTEXT.md
+@@ -6,6 +6,9 @@
+ 
+ ## Language
+ 
++> 三個槽位對應 `bootstrap_check.sh` 的門檻（至少三個詞條）。
++> **表格也算數**，見本段末尾——腳本兩種形狀都認得，挑讀起來順的那個。
++
+ **<詞>**：
+ <一句話定義。用領域語言，不用實作細節。>
+ _避免_：<被這個詞取代掉的舊叫法>
+@@ -14,6 +17,19 @@ _避免_：<被這個詞取代掉的舊叫法>
+ <定義>
+ _避免_：<舊叫法>
+ 
++**<詞>**：
++<定義>
++_避免_：<舊叫法>
++
++<!-- 詞多起來之後，表格通常比散文好掃。等價的寫法：
++
++| 詞 | 定義 | 避免的舊叫法 |
++|---|---|---|
++| **<詞>** | <一句話定義> | <被取代掉的叫法> |
++
++「避免的舊叫法」那一欄比看起來有用——它逼你寫下**被取代掉的那個名字**，
++而那正是歧義的來源。散文式的 `_避免_：` 是同一件事，只是比較容易忘記填。 -->
++
+ ## Relationships
+ 
+ - 一個 **<A>** 持有多個 **<B>**
+diff --git a/templates/_meta/bootstrap_check.sh b/templates/_meta/bootstrap_check.sh
+index ec0f189..6c7c708 100644
+--- a/templates/_meta/bootstrap_check.sh
++++ b/templates/_meta/bootstrap_check.sh
+@@ -9,6 +9,85 @@
+ #      不給路徑就檢查現在的目錄。
+ set -uo pipefail
+ 
++# --selftest：拿**這個腳本自己的模板**建一份 fixture，再用一般模式檢查它。
++#
++# 存在的理由是一個真的踩過的坑：templates/CONTEXT.md 照著填會過不了這支腳本
++# （模板寫散文，腳本數表格的 `|`）。兩份檔案分別寫、沒有機制要求一致，於是漂掉，
++# 而且**兩邊看起來都很正常**——只有把模板餵給腳本才看得出來。
++#
++# 順便驗一次紅燈：詞條不足的 CONTEXT.md 必須被擋。只驗綠燈的自測，
++# 對一個永遠回傳 0 的假實作也會全過。
++if [ "${1:-}" = "--selftest" ]; then
++  self=$(cd "$(dirname "$0")" && pwd)
++  tpl="$self/../CONTEXT.md"
++  [ -f "$tpl" ] || { echo "找不到 $tpl"; exit 1; }
++
++  fixture() { # context-file -> 一個最小但合格的專案目錄
++    local ctx="$1" d
++    d=$(mktemp -d)
++    ( cd "$d"       && git init -q -b main .       && git config user.email selftest@local && git config user.name selftest       && printf '.claude/settings.local.json
++' > .gitignore       && printf '# fixture
++' > CLAUDE.md       && mkdir -p .claude/rules docs/lessons       && for n in core-rules dispatch evidence-grades git-workflow register thinking-boundary; do
++           printf '# %s
++' "$n" > ".claude/rules/$n.md"
++         done       && cp "$ctx" CONTEXT.md       && git add -A && git commit -qm 'chore: bootstrap' ) >/dev/null 2>&1
++    echo "$d"
++  }
++
++  fails=0
++
++  # 綠燈：模板原樣（它的 Language 段落有三個詞條）必須通過。
++  good=$(fixture "$tpl")
++  if bash "$0" "$good" >/dev/null 2>&1; then
++    echo "  ok    模板原樣通過自己的檢查"
++  else
++    echo "  FAIL  templates/CONTEXT.md 過不了 bootstrap_check.sh —— 兩者又漂開了"
++    bash "$0" "$good" | sed 's/^/        /'
++    fails=$((fails + 1))
++  fi
++
++  # 紅燈：只有一個詞條必須被擋。沒看過紅燈的檢查不算裝好。
++  thin=$(mktemp)
++  printf '# 共享語言
++
++## Language
++
++**只有一個詞**：
++定義
++' > "$thin"
++  poor=$(fixture "$thin")
++  if bash "$0" "$poor" >/dev/null 2>&1; then
++    echo "  FAIL  詞條不足的 CONTEXT.md 沒有被擋下來"
++    fails=$((fails + 1))
++  else
++    echo "  ok    詞條不足時擋下來（看過紅燈）"
++  fi
++
++  # 紅燈：表格式寫法也要認得。
++  tbl=$(mktemp)
++  printf '# 共享語言
++
++## Language
++
++| 詞 | 定義 | 避免 |
++|---|---|---|
++| A | a | x |
++| B | b | y |
++| C | c | z |
++' > "$tbl"
++  tblp=$(fixture "$tbl")
++  if bash "$0" "$tblp" >/dev/null 2>&1; then
++    echo "  ok    表格式寫法也算數"
++  else
++    echo "  FAIL  表格式的 CONTEXT.md 被誤判為太空"
++    fails=$((fails + 1))
++  fi
++
++  rm -rf "$good" "$poor" "$tblp" "$thin" "$tbl"
++  [ "$fails" -eq 0 ] && { echo; echo "自測通過"; exit 0; }
++  echo; echo "自測失敗 $fails 項"; exit 1
++fi
++
+ ROOT="${1:-$PWD}"
+ pass=0
+ fail=0
+@@ -45,10 +124,24 @@ n_rules=$(ls "$ROOT"/.claude/rules/*.md 2>/dev/null | wc -l | tr -d ' ')
+ 
+ # 3. 專案自己的產出
+ [ -f "$ROOT/CLAUDE.md" ] && ok "專案 CLAUDE.md 已產出" || bad "缺 CLAUDE.md"
++# CONTEXT.md 的充實度。**兩種寫法都算**——散文式（模板的預設）與表格式。
++#
++# 舊版只數以 `|` 開頭的行，於是照 templates/CONTEXT.md 填出來的檔案一律不及格：
++# 那個模板的 Language 段落是散文，`grep -c '^|'` 回傳 0。模板與它的驗收腳本
++# 分別寫、沒有任何機制要求一致，於是漂掉了。`--selftest` 現在會擋住這件事重演。
++count_terms() { # file -> 詞條數
++  local f="$1" bold rows
++  bold=$(grep -cE '^\*\*[^*]+\*\*' "$f" 2>/dev/null || true)
++  # 表格：扣掉分隔列，再扣一列表頭。
++  rows=$(grep -E '^\|' "$f" 2>/dev/null | grep -cvE '^\|[[:space:]:|-]+$' || true)
++  [ "${rows:-0}" -gt 0 ] && rows=$((rows - 1))
++  echo $(( ${bold:-0} + ${rows:-0} ))
++}
++
+ if [ -f "$ROOT/CONTEXT.md" ]; then
+-  terms=$(grep -c '^|' "$ROOT/CONTEXT.md" 2>/dev/null || echo 0)
+-  if [ "$terms" -ge 5 ]; then ok "CONTEXT.md 有內容（$terms 列表格）"
+-  else bad "CONTEXT.md 太空（$terms 列）" "至少填三到五個真的會用到的詞"; fi
++  terms=$(count_terms "$ROOT/CONTEXT.md")
++  if [ "$terms" -ge 3 ]; then ok "CONTEXT.md 有內容（$terms 個詞條）"
++  else bad "CONTEXT.md 太空（$terms 個詞條）" "至少填三到五個真的會用到的詞"; fi
+ else
+   bad "缺 CONTEXT.md"
+ fi
+diff --git a/templates/_meta/new_project_bootstrap.md b/templates/_meta/new_project_bootstrap.md
+index 35616e3..25b99f8 100644
+--- a/templates/_meta/new_project_bootstrap.md
++++ b/templates/_meta/new_project_bootstrap.md
+@@ -100,6 +100,7 @@ printf '.claude/settings.local.json
+ ### 2. `CONTEXT.md`
+ 
+ 用 `templates/CONTEXT.md`。**一開始只填三到五個詞**——這時候你猜的比知道的多。
++散文式與表格式都可以，`bootstrap_check.sh` 兩種形狀都認得。
+ 
+ ### 3. `docs/lessons/INDEX.md`
+ 
+@@ -122,6 +123,10 @@ bash templates/_meta/bootstrap_check.sh <新專案路徑>
+ **核取方塊靠人記得，腳本不會忘。** 這份清單原本是七個方塊，第一次被真的執行時
+ 就漏掉了最重要的那一條（版控）。
+ 
++改過這支腳本或 `templates/CONTEXT.md` 之後，跑 `bash templates/_meta/bootstrap_check.sh --selftest`
++——它拿模板自己去餵腳本，並驗一次紅燈。兩份檔案分別寫、沒有機制要求一致，就會漂掉
++（`docs/lessons/0006`）。
++
+ 還有一項腳本判不了、要人自己確認：
+ 
+ - [ ] 專案的 `CLAUDE.md` **只放環境查不到的東西**（`package.json` 已有的別抄一份）
+-- 
+2.42.0.windows.2
+
