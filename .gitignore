@@ -20,6 +20,9 @@ artifacts/
 # runs/ 的權重與陣列不進版控，但**帳本與校準檔要進**。
 # 它們是這個專案的證據：ledger 記了每一輪的假設、資料指紋與當時的 commit，
 # frozen_ledger 記了 holdout 被解凍過幾次——這兩件事重跑一次是重建不出來的。
+# CI 的煙霧測試寫這裡，與 runs/ 的證據分開。
+runs-ci/
+
 runs/*
 !runs/ledger.jsonl
 !runs/frozen_ledger.jsonl

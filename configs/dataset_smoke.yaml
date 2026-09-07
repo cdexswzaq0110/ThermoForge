@@ -1,0 +1,22 @@
+# 煙霧測試用的迷你資料集：CI 上跑得完的最小規模。
+#
+# 它**不是**用來得到有意義的分數的——48 列、2 折、32×32 網格，任何數字都沒有統計意義。
+# 它驗的是「整條 CLI 路徑跑得起來」：生成 → 守恆檢查 → 切分 → 快取基準 → 訓練 → 評估 → 帳本。
+# 那條路徑壞掉的時候，單元測試全部會是綠的（它們呼叫的是函式，不是 CLI）。
+
+name: smoke
+seed: 1
+
+grid:
+  ny: 32
+  nx: 32
+
+id:
+  n_base: 12              # 12 x 4 = 48 列
+  conditions_per_base: 4
+
+ood:
+  n_base_per_regime: 2    # 5 個 regime x 2 x 2 = 20 列
+  conditions_per_base: 2
+
+folds: 2

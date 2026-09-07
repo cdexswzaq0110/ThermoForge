@@ -49,6 +49,14 @@ def run_oof(make: MakePredictor, ds_id: Dataset, n_folds: int = 5) -> tuple[np.n
     oof = np.full(ds_id.temperature.shape, np.nan, dtype=np.float64)
     per_fold: list[FieldMetrics] = []
 
+    present = set(int(f) for f in np.unique(folds))
+    expected = set(range(n_folds))
+    if present != expected:
+        raise ValueError(
+            f"資料集的 fold 是 {sorted(present)}，但要求跑 {n_folds} 折。"
+            "空的 fold 會讓 metrics 變成 NaN 而不是報錯——那種綠燈最貴。"
+        )
+
     for f in range(n_folds):
         val_mask = folds == f
         train = ds_id.subset(~val_mask)
