@@ -1,0 +1,19 @@
+# Harness
+.claude/settings.local.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# 產出物（可由 code + config 重建，不進版控）
+data/raw/
+data/processed/
+runs/
+artifacts/
+*.pt
+*.npz
+*.npy
