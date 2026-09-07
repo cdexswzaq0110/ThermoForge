@@ -6,7 +6,14 @@
 
 一個把「這個分數可不可信」看得比「這個分數高不高」更重要的物理 AI 專案。
 
+[![CI](https://github.com/cdexswzaq0110/ThermoForge/actions/workflows/ci.yml/badge.svg)](https://github.com/cdexswzaq0110/ThermoForge/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
+
 </div>
+
+> CI 跑兩件不同的事：**單元測試**（呼叫函式）與**端到端煙霧測試**（跑整條 CLI，
+> 用 48 列的迷你資料集）。分開是因為它們的失敗方式不重疊——CLI 參數或設定檔壞掉時，
+> 單元測試會全部是綠的。
 
 ---
 

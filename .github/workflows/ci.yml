@@ -1,0 +1,131 @@
+# CI 驗兩件事，而且是兩件不同的事：
+#
+#   tests    —— 單元測試。它們呼叫的是**函式**。
+#   pipeline —— 迷你資料集跑完整條 CLI。它驗的是**指令路徑**。
+#
+# 分開是因為它們的失敗方式不重疊：CLI 的參數、設定檔、模組入口壞掉的時候，
+# 單元測試會全部是綠的。反過來，數值錯誤只有單元測試抓得到。
+#
+# 兩個 job 都用 requirements-ci.txt（torch 換 CPU 版）——runner 沒有 GPU，
+# 而 cu121 的 wheel 有 2.5 GB。requirements.txt 與它的一致性由
+# tests/test_packaging.py 檢查，不靠人記得同步。
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  tests:
+    name: 單元測試
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: 安裝依賴
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: 全模組可 import
+        run: |
+          python -m compileall -q thermoforge scripts tests
+          python -c "
+          import importlib, pkgutil, thermoforge
+          mods = [m.name for m in pkgutil.walk_packages(thermoforge.__path__, 'thermoforge.')]
+          for m in mods:
+              importlib.import_module(m)
+          print(f'{len(mods) + 1} 個模組 import OK')
+          "
+
+      - name: pytest
+        run: python -m pytest -q
+
+  pipeline:
+    name: 端到端煙霧測試
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: 安裝依賴
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: 生資料與候選池
+        run: |
+          python -m thermoforge.data.generate --config configs/dataset_smoke.yaml
+          python -m thermoforge.data.pools    --config configs/pools_smoke.yaml
+
+      - name: 快取物理基準場
+        run: |
+          python -m thermoforge.precompute_greens --data data/processed/smoke.npz
+          python -m thermoforge.precompute_greens --data data/processed/pools_smoke.npz
+
+      - name: 跑一個基準與一個訓練
+        run: |
+          python -m thermoforge.experiments --model greens_images --folds 2 \
+            --data data/processed/smoke.npz --pools data/processed/pools_smoke.npz \
+            --runs-dir runs-ci \
+            --hypothesis "煙霧測試：基準路徑跑得起來" --change "無"
+          python -m thermoforge.experiments --model unet --variant residual \
+            --epochs 1 --folds 2 \
+            --data data/processed/smoke.npz --pools data/processed/pools_smoke.npz \
+            --runs-dir runs-ci \
+            --hypothesis "煙霧測試：訓練與推論路徑跑得起來" --change "無"
+
+      - name: 定版、解凍與報告路徑
+        run: |
+          python -m thermoforge.champion --variant residual --epochs 1 --folds 2 \
+            --data data/processed/smoke.npz --out runs-ci/champion_smoke
+          python -m thermoforge.frozen --confirm --champion runs-ci/champion_smoke \
+            --data data/processed/smoke.npz --pools data/processed/pools_smoke.npz \
+            --runs-dir runs-ci
+          python -m thermoforge.report --runs-dir runs-ci
+
+      # 寫進 runs-ci/ 而不是 runs/：runs/ 裝的是這個專案的**證據**
+      # （九個 run 的帳本、holdout 只被解凍過一次的紀錄）。煙霧測試往裡面追加，
+      # 會讓那份紀錄變成假的。
+      - name: 驗收帳本
+        run: |
+          python -c "
+          import json, pathlib
+          rows = [json.loads(l) for l in pathlib.Path('runs-ci/ledger.jsonl').read_text(encoding='utf-8').splitlines()]
+          assert len(rows) == 2, f'帳本應有 2 列，實得 {len(rows)}'
+          required = {'run_id', 'git_commit', 'data', 'config', 'hypothesis', 'main_change', 'result'}
+          for r in rows:
+              missing = required - set(r)
+              assert not missing, f'{r.get(\"run_id\")} 缺欄位 {missing}'
+              assert r['hypothesis'], '假設欄位是空的——那比沒有欄位更糟'
+              assert r['result']['oof']['n'] == 48, r['result']['oof']['n']
+          frozen = pathlib.Path('runs-ci/frozen_ledger.jsonl').read_text(encoding='utf-8').splitlines()
+          assert len(frozen) == 1, f'解凍帳本應有 1 列，實得 {len(frozen)}'
+          print('帳本 2 列、解凍帳本 1 列，欄位齊全')
+          "
+
+      - name: 副駕在沒有 champion 權重時要好好地失敗
+        run: |
+          set +e
+          python -m thermoforge.copilot "現在這塊板的熱點多少度？" --champion runs-ci/does-not-exist/model.pt
+          code=$?
+          set -e
+          test "$code" -eq 1 || { echo "預期 exit 1（找不到權重），實得 $code"; exit 1; }
+          echo "缺權重時回傳 1 並給出可行動的訊息"

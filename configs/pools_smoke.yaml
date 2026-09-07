@@ -1,0 +1,13 @@
+# 煙霧測試用的迷你候選池。理由同 configs/dataset_smoke.yaml：
+# 驗的是路徑跑不跑得起來，不是分數。
+
+name: pools_smoke
+seed: 1
+
+grid:
+  ny: 32
+  nx: 32
+
+n_pools_dev: 2
+n_pools_frozen: 2
+variants_per_pool: 8

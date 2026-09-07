@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--epochs", type=int, default=25)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--under-weight", type=float, default=1.0)
+    p.add_argument("--folds", type=int, default=5, help="必須與資料集的 fold 數相同")
     p.add_argument("--data", type=Path, default=Path("data/processed/v1.npz"))
     p.add_argument("--out", type=Path, default=Path("runs/champion"))
     p.add_argument(
@@ -74,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{final.name} → {args.out}/model.pt  {time.perf_counter() - t0:.0f}s（跳過 OOF，無校準檔）")
         return 0
 
-    oof, per_fold = run_oof(make, ds)
+    oof, per_fold = run_oof(make, ds, n_folds=args.folds)
     truth = ds.temperature.astype(np.float64)
     overall = evaluate_fields(oof, truth)
 
@@ -97,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
             "epochs": args.epochs,
             "seed": args.seed,
             "under_weight": args.under_weight,
+            "folds": args.folds,
         },
         "data_sha256": ds.manifest["array_sha256"]["temperature"],
         "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

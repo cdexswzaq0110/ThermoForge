@@ -1,0 +1,18 @@
+# CI 用：與 requirements.txt 完全相同，只有 torch 換成 CPU 版本。
+#
+# 為什麼要分開一份：requirements.txt 釘的是 torch==2.5.1+cu121，那個版本在
+# GitHub runner 上裝不起來（沒有 GPU，而且 cu121 wheel 有 2.5 GB）。
+# CI 要驗的是「這份程式碼跑不跑得起來」，不是「CUDA 裝不裝得起來」。
+#
+# 兩份檔案會漂——所以 tests/test_packaging.py 會檢查它們除了 torch 之外逐項相同。
+# 這是 docs/lessons/0003 的「模板 ＋ 驗收腳本要成對驗證」用在依賴檔上。
+
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
+numpy==2.4.6
+scipy==1.17.1
+torch==2.5.1
+PyYAML==6.0.3
+matplotlib==3.9.2
+pytest==9.1.1
