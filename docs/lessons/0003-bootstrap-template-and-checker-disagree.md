@@ -65,8 +65,32 @@ validated:
 更一般的做法：**任何「模板 ＋ 驗收腳本」成對出現的地方，加一個把模板本身
 餵給腳本的測試。** 兩份文件會漂，只有可執行的東西不會。
 
+## 修正已經寫好了，但**沒有**套用
+
+2026-09-07 當天實作並驗證過一版修正，選的是「腳本放寬」而不是「模板改表格」——
+改模板會讓已經照舊格式寫過 `CONTEXT.md` 的專案下次跑檢查時突然變紅，
+而它們沒有做錯任何事。**判準的缺陷不該由使用者付代價。**
+
+內容：`count_terms` 兩種形狀都算（行首粗體詞條、表格資料列），門檻 5 → 3
+（對齊腳本自己那句「至少填三到五個詞」）；新增 `--selftest` 拿模板原樣建 fixture
+跑一次綠燈、一次紅燈、一次表格式。
+
+驗證結果【已確認：2026-09-07 在 Serendipity 的工作副本上實測】：
+
+| 檢查 | 結果 |
+|---|---|
+| `bootstrap_check.sh --selftest` | 3／3 |
+| `.claude/hooks/selftest.sh` | 通過 22／失敗 0 |
+| 對本專案（表格式）跑一般模式 | 通過 8／失敗 0，無回歸 |
+
+**它沒有被套用到上游，而且是刻意的**：那是工具 repo 自己該排的一輪，
+不是一個專案 session 順手做掉的事（見 [L0005](0005-a-project-does-not-modify-its-tooling.md)）。
+diff 保存在 [`docs/upstream/serendipity-bootstrap-check.patch`](../upstream/serendipity-bootstrap-check.patch)，
+套用方式見 [`docs/upstream/README.md`](../upstream/README.md)。
+
 ## 失效條件
 
-- Serendipity 上游修掉其中一邊——這一則就完成任務，改標 `corrected` 或封存。
+- Serendipity 上游修掉其中一邊（或套用了 `docs/upstream/` 的 patch）——
+  這一則就完成任務，改標 `corrected` 或封存，並把 patch 一併刪掉。
 - `bootstrap_check.sh` 改成不檢查 `CONTEXT.md` 的充實度——這一則不再適用，
   但「模板要能通過自己的驗收腳本」那一句仍然成立。
