@@ -45,7 +45,8 @@ CAL = {
         "tmax_err_q95": 1.4,
         "tmax_under_p95": 1.1,
     },
-    "ood": {"ood_power": {"tmax_mae": 12.7}},
+    # 欄位對齊 runs/champion/calibration.json 的實際形狀（FieldMetrics.as_dict()）。
+    "ood": {"ood_power": {"tmax_mae": 12.7, "under_rate": 0.34}},
 }
 
 
@@ -123,6 +124,8 @@ def test_out_of_distribution_answer_refuses_to_be_used(board):
     assert any("未驗證" in line for line in a.lines)
     assert any("送求解器" in line or "CFD" in line for line in a.lines)
     assert any("熱點溫升" in line for line in a.lines), "沒有點名是哪一軸出界"
+    # 出界的軸有對應的 OOD regime 實測時，要引用**那一個**的數字，不是最差的那個。
+    assert any("ood_power" in line and "12.70" in line for line in a.lines)
 
 
 def test_missing_calibration_downgrades_to_unverified(board):
@@ -151,3 +154,19 @@ def test_optimize_reports_solver_confirmed_numbers(board):
         assert p["solver_tmax"] > 0
     assert any("求解器" in line and "已確認" in line for line in a.lines)
     assert any("不是最佳解證明" in line for line in a.lines)
+
+
+def test_a_limit_in_the_question_overrides_the_board_default(board):
+    """問句裡給的上限要真的被用到。解析到卻忽略＝回答了另一個問題。"""
+    q = RuleBasedParser().parse("熱點不能超過 60 度，現在如何？", board)
+    a = answer_query(q, board, StubPredictor(peak_rise=20.0), CAL)
+    assert q.t_max_limit == 60.0
+    assert a.margin == pytest.approx(60.0 - a.t_max)
+    assert any("你指定的上限 60" in line for line in a.lines)
+
+
+def test_board_default_limit_is_used_when_the_question_gives_none(board):
+    q = RuleBasedParser().parse("現在這塊板的熱點多少度？", board)
+    a = answer_query(q, board, StubPredictor(peak_rise=20.0), CAL)
+    assert a.margin == pytest.approx(board.t_max_allowed - a.t_max)
+    assert any("板子預設的上限" in line for line in a.lines)

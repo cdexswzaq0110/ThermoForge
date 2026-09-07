@@ -20,17 +20,28 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import sys
+from pathlib import Path as _Path
+
+# 直接跑 `python scripts/x.py` 時，repo 根目錄不在 sys.path 上。
+# 加在這裡而不是要求使用者設 PYTHONPATH——README 的指令要能照抄就跑。
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+
+
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
+from matplotlib.ticker import FuncFormatter, NullFormatter
 
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"
 INK2 = "#52514e"
 GRID = "#e3e2de"
+GRID_DARK = "#a8a7a1"
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
 
 SEQ_POWER = LinearSegmentedColormap.from_list("tf_power", ["#eef4fd", "#86b6ef", "#256abf", "#0d366b"])
@@ -38,6 +49,42 @@ SEQ_TEMP = LinearSegmentedColormap.from_list("tf_temp", ["#fdf0e9", "#f7b48f", "
 DIVERGING = LinearSegmentedColormap.from_list("tf_err", ["#184f95", "#86b6ef", "#f0efec", "#f09190", "#a81f1e"])
 
 OUT = Path("docs/images")
+
+#: 圖上的文字是中文。matplotlib 預設字型沒有 CJK 字符，會安靜地畫成豆腐方塊——
+#: 不報錯、不警告，只有人打開圖才看得到。所以在這裡明確挑一個裝得到的 CJK 字型，
+#: 一個都找不到就出聲。
+_CJK_CANDIDATES = (
+    "Microsoft JhengHei",
+    "Microsoft YaHei",
+    "Noto Sans CJK TC",
+    "Noto Sans CJK SC",
+    "PingFang TC",
+    "SimHei",
+)
+
+
+def _use_cjk_font() -> None:
+    have = {f.name for f in font_manager.fontManager.ttflist}
+    chosen = [n for n in _CJK_CANDIDATES if n in have]
+    if not chosen:
+        raise SystemExit(
+            "找不到任何 CJK 字型，圖上的中文會變成豆腐方塊。"
+            f"請安裝其中之一：{', '.join(_CJK_CANDIDATES)}"
+        )
+    plt.rcParams["font.sans-serif"] = chosen + ["DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+
+def _plain_log(ax, which: str) -> None:
+    """對數軸改用一般數字標籤，不走 mathtext。
+
+    matplotlib 的對數軸預設用 mathtext 排 10^n，而 mathtext 走的是另一套字型設定——
+    CJK 字型換掉之後，負指數的 U+2212 會變成缺字方塊。改成純數字最省事，
+    而且 0.1 / 1 / 10 本來就比 10⁻¹ / 10⁰ / 10¹ 好讀。
+    """
+    axis = ax.yaxis if which == "y" else ax.xaxis
+    axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    axis.set_minor_formatter(NullFormatter())
 
 
 def _style(ax, title: str, xlabel: str = "", ylabel: str = "") -> None:
@@ -99,7 +146,7 @@ def figure_fields() -> None:
         axes[3],
         d,
         DIVERGING,
-        f"誤差（預測 − 真值）  最大 |Δ| {lim:.2f} °C",
+        f"誤差（預測 - 真值）  最大 |Δ| {lim:.2f} °C",
         norm=TwoSlopeNorm(vmin=-lim, vcenter=0.0, vmax=lim),
         unit="°C",
     )
@@ -162,6 +209,7 @@ def figure_models() -> None:
     ax = axes[0]
     ax.barh(y, tmax_mae, color=colors, height=0.62)
     ax.set_xscale("log")
+    _plain_log(ax, "x")
     ax.set_yticks(y, labels, color=INK2)
     ax.invert_yaxis()
     _style(ax, "熱點溫度誤差（OOF，越低越好）", "Tmax MAE  °C（對數軸）")
@@ -173,13 +221,19 @@ def figure_models() -> None:
     ax.barh(y, recall, xerr=recall_std, color=colors, height=0.62,
             error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 3})
     ax.axvline(10 / 60, color=INK2, linestyle="--", linewidth=1)
-    ax.text(10 / 60, -0.9, "機會水準 0.167", color=INK2, fontsize=8, ha="center")
     ax.set_yticks(y, ["" for _ in labels])
     ax.invert_yaxis()
-    ax.set_xlim(0, 1.05)
+    ax.set_xlim(0, 1.22)
     _style(ax, "候選池篩選召回率 recall@10/60（越高越好）", "召回率")
-    for yi, v in zip(y, recall):
-        ax.text(v + 0.02, yi, f"{v:.3f}", va="center", color=INK, fontsize=9)
+    # 標籤放在誤差棒右端之後的固定欄位，避免與 cap 疊字（渲染後目視確認過）。
+    for yi, v, sd in zip(y, recall, recall_std):
+        ax.text(v + sd + 0.03, yi, f"{v:.3f}", va="center", color=INK, fontsize=9)
+    ax.annotate(
+        "機會水準 0.167",
+        xy=(10 / 60, len(order) - 0.55),
+        xytext=(10 / 60 + 0.04, len(order) - 0.55),
+        color=INK2, fontsize=8, va="center",
+    )
     ax.grid(axis="y", visible=False)
 
     fig.tight_layout()
@@ -193,20 +247,34 @@ def figure_ood() -> None:
         print("跳過 OOD 圖：還沒解凍 frozen holdout")
         return
     entry = json.loads(path.read_text(encoding="utf-8").splitlines()[-1])
-    series = {entry["champion"]: entry["ood"], **entry.get("ood_comparisons", {})}
+    pool = {entry["champion"]: entry["ood"], **entry.get("ood_comparisons", {})}
+    # 依消融的順序排（direct → norm → residual），讓每一組長條由左到右
+    # 就是「加上一個決策」的效果。champion 放最後並標出來。
+    wanted = ["unet_direct", "unet_norm", entry["champion"]]
+    series = {n: pool[n] for n in wanted if n in pool}
+    series.update({n: r for n, r in pool.items() if n not in series})
+    labels = {n: (f"{n}（champion）" if n == entry["champion"] else n) for n in series}
     regimes = list(next(iter(series.values())).keys())
 
-    fig, ax = plt.subplots(figsize=(10, 4.4))
+    fig, ax = plt.subplots(figsize=(10, 4.6))
     fig.patch.set_facecolor(SURFACE)
     width = 0.8 / len(series)
     x = np.arange(len(regimes))
     for j, (name, rep) in enumerate(series.items()):
         vals = [rep[r]["tmax_mae"] for r in regimes]
         pos = x + (j - (len(series) - 1) / 2) * width
-        ax.bar(pos, vals, width=width * 0.9, color=SERIES[j], label=name)
+        ax.bar(pos, vals, width=width * 0.9, color=SERIES[j], label=labels[name])
         for p, v in zip(pos, vals):
-            ax.text(p, v * 1.05, f"{v:.1f}", ha="center", color=INK, fontsize=8)
+            ax.text(p, v * 1.06, f"{v:.2f}", ha="center", color=INK, fontsize=8)
+    id_ref = entry["id_refit_reference"]["tmax_mae"]
+    ax.axhline(id_ref, color=INK2, linestyle="--", linewidth=1)
+    # 標在左端：右邊被 ood_power 那組長條佔滿（渲染後目視確認過）。
+    ax.text(
+        -0.45, id_ref * 1.10,
+        f"champion 在 id 上的水準 {id_ref:.2f} °C", color=INK2, fontsize=8, ha="left",
+    )
     ax.set_yscale("log")
+    _plain_log(ax, "y")
     ax.set_xticks(x, regimes, color=INK2)
     _style(ax, "分佈外的熱點誤差：每個 regime 只把一個軸推出訓練範圍", "", "Tmax MAE  °C（對數軸）")
     ax.grid(axis="x", visible=False)
@@ -238,11 +306,22 @@ def figure_error_drivers() -> None:
         d = drivers[key]
         edges = np.array(d["edges"])
         centres = 0.5 * (edges[:-1] + edges[1:])
-        ax.plot(centres, d["mae"], color=SERIES[0], linewidth=2, marker="o", markersize=6)
+        # 跨 fold 排序不穩的因子畫成灰色虛線並標明「不報」——
+        # Stage 6 硬規則第 2 條：不穩的排序不能拿去講故事。
+        stable = d["fold_rank_agreement"] >= 0.5
+        ax.plot(
+            centres, d["mae"],
+            color=SERIES[0] if stable else GRID_DARK,
+            linewidth=2, marker="o", markersize=6,
+            linestyle="-" if stable else "--",
+        )
         _style(ax, label, "", "Tmax MAE  °C" if ax is axes[0] else "")
+        note = f"跨 fold 排序一致性 {d['fold_rank_agreement']:.2f}"
+        if not stable:
+            note += "\n（不穩，不報）"
         ax.text(
-            0.02, 0.94, f"跨 fold 排序一致性 {d['fold_rank_agreement']:.2f}",
-            transform=ax.transAxes, color=INK2, fontsize=8, va="top",
+            0.97, 0.95, note, transform=ax.transAxes, color=INK2,
+            fontsize=8, va="top", ha="right",
         )
     fig.suptitle("誤差的結構驅動因子（champion，OOF）", color=INK, fontsize=11, x=0.01, ha="left")
     fig.tight_layout()
@@ -251,6 +330,7 @@ def figure_error_drivers() -> None:
 
 
 def main() -> int:
+    _use_cjk_font()
     OUT.mkdir(parents=True, exist_ok=True)
     figure_models()
     figure_fields()

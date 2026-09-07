@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from .. import dataset
-from ..data.sampler import ID_RANGES, check_in_distribution, place_rects
+from ..data.sampler import ID_RANGES, OOD_REGIMES, check_in_distribution, place_rects
 from ..solver import solve_layout
 from .board import ReferenceBoard
 from .query import DesignQuery
@@ -44,6 +44,23 @@ _AXIS_LABEL = {
     "peak_rise": "熱點溫升（估計）",
     "n_components": "元件數",
 }
+
+
+def _regimes_for_axis(axis: str) -> dict[str, tuple[float, float]]:
+    """哪些 OOD regime 推的正好是這一軸，以及它們量測的範圍。
+
+    有了這張對照，副駕就能從「分佈外，未驗證」升級成
+    「分佈外，但這一軸有實測：ood_power 在 90–170 K 上的 Tmax MAE 是 X」。
+    兩句話的行動含意不同——後者讓工程師知道風險有多大，前者只讓他不敢動。
+    """
+    id_fields = ID_RANGES.__dict__
+    out = {}
+    for name, ranges in OOD_REGIMES.items():
+        changed = [k for k, v in ranges.__dict__.items() if v != id_fields[k]]
+        if changed == [axis]:
+            lo, hi = ranges.__dict__[axis]
+            out[name] = (float(lo), float(hi))
+    return out
 
 
 @dataclass
@@ -120,7 +137,12 @@ def answer_query(
         return _answer_optimize(query, after, predictor, calibration, ood, lines, n_candidates, n_confirm, seed)
 
     t_max = float(_predict_tmax(predictor, [layout])[0])
-    margin = after.t_max_allowed - t_max
+
+    # 使用者在問句裡給的上限**覆蓋**板子的預設值。解析到卻不用，
+    # 會得到一個對板子預設上限正確、但回答了另一個問題的餘裕——
+    # 這正是 `query.py` 那條「不要補完」規則的另一面。
+    limit = query.t_max_limit if query.t_max_limit is not None else after.t_max_allowed
+    margin = limit - t_max
 
     if ood:
         grade = "未驗證"
@@ -155,7 +177,8 @@ def answer_query(
             f"{interval[0]:.1f}–{interval[1]:.1f} °C】"
         )
         verdict = "在上限內" if margin > 0 else "**超過上限**"
-        lines.append(f"對上限 {after.t_max_allowed:.0f} °C 的餘裕：{margin:+.1f} °C（{verdict}）")
+        source = "你指定的" if query.t_max_limit is not None else "板子預設的"
+        lines.append(f"對{source}上限 {limit:.0f} °C 的餘裕：{margin:+.1f} °C（{verdict}）")
         if 0 < margin < calibration["id"]["tmax_under_p95"]:
             lines.append(
                 f"⚠ 餘裕 {margin:.1f} °C 小於代理模型的低估 p95 "
@@ -167,13 +190,26 @@ def answer_query(
             lines.append(
                 f"  · {_AXIS_LABEL.get(axis, axis)} = {value:.3g}，訓練分佈只到 {lo:.3g}–{hi:.3g}"
             )
-        if calibration and calibration.get("ood"):
-            worst = max(calibration["ood"].values(), key=lambda d: d["tmax_mae"])
-            lines.append(
-                f"  · 代理模型在分佈外的實測 Tmax_MAE 最差到 {worst['tmax_mae']:.1f} °C，"
-                "這個數字的誤差可能是同一個量級"
-            )
-        lines.append("  → 這題要送求解器／CFD，不要用代理模型的數字下結論")
+        measured = calibration.get("ood") if calibration else None
+        if measured:
+            for axis, (value, _) in ood.items():
+                hits = [
+                    (name, rng)
+                    for name, rng in _regimes_for_axis(axis).items()
+                    if name in measured and rng[0] <= value <= rng[1]
+                ]
+                for name, (lo, hi) in hits:
+                    m = measured[name]
+                    detail = f"Tmax MAE 是 {m['tmax_mae']:.2f} °C"
+                    if "under_rate" in m:
+                        detail += f"，低估率 {m['under_rate']:.1%}"
+                    lines.append(f"  · 這一軸有實測：`{name}` regime（{lo:g}–{hi:g}）的 {detail}")
+                if not hits:
+                    lines.append(
+                        f"  · {_AXIS_LABEL.get(axis, axis)} 這一軸**沒有任何實測**——"
+                        "誤差多大是未知，不是「大概跟別的 regime 差不多」"
+                    )
+        lines.append("  → 這題要送求解器／CFD 確認再下結論；上面的實測數字說明風險量級，不是背書")
 
     return Answer(
         query=query,
