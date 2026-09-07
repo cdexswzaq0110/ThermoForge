@@ -1,0 +1,23 @@
+# ThermoForge 資料集 v1
+#
+# 取樣範圍不在這裡——它們是 thermoforge/data/sampler.py 的 ID_RANGES 與
+# OOD_REGIMES，會原樣寫進 manifest。範圍是**程式碼**而不是設定：
+# 改一個 OOD regime 的邊界會讓所有既有分數失去可比性，那種改動應該
+# 進 diff 被人看見，而不是躺在一個沒人 review 的 yaml 欄位裡。
+
+name: v1
+seed: 20260907
+
+grid:
+  ny: 64
+  nx: 64
+
+id:
+  n_base: 900             # 900 個幾何 x 4 組操作條件 = 3600 列
+  conditions_per_base: 4
+
+ood:
+  n_base_per_regime: 40   # 5 個 regime x 40 x 4 = 800 列
+  conditions_per_base: 4
+
+folds: 5

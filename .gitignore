@@ -12,8 +12,18 @@ __pycache__/
 # 產出物（可由 code + config 重建，不進版控）
 data/raw/
 data/processed/
-runs/
 artifacts/
 *.pt
 *.npz
 *.npy
+
+# runs/ 的權重與陣列不進版控，但**帳本與校準檔要進**。
+# 它們是這個專案的證據：ledger 記了每一輪的假設、資料指紋與當時的 commit，
+# frozen_ledger 記了 holdout 被解凍過幾次——這兩件事重跑一次是重建不出來的。
+runs/*
+!runs/ledger.jsonl
+!runs/frozen_ledger.jsonl
+!runs/*/
+runs/*/*
+!runs/*/metrics.json
+!runs/*/calibration.json

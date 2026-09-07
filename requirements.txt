@@ -1,0 +1,18 @@
+# 直接依賴。完整凍結見 requirements.lock.txt（由 uv pip freeze 產生）。
+# 版本對齊本機已驗證可用的組合（RTX 3060 / CUDA 12.1 / Python 3.11）。
+
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# 求解器與數值
+numpy==2.4.6
+scipy==1.17.1
+
+# 代理模型
+torch==2.5.1+cu121
+
+# 設定與診斷圖
+PyYAML==6.0.3
+matplotlib==3.9.2
+
+# 測試
+pytest==9.1.1
