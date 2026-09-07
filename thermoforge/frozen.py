@@ -49,6 +49,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--confirm", action="store_true", required=True,
                    help="必須明確加上。每次執行都會在 runs/frozen_ledger.jsonl 留一列")
     p.add_argument("--champion", type=Path, default=Path("runs/champion"))
+    p.add_argument(
+        "--also",
+        type=Path,
+        nargs="*",
+        default=(),
+        help="一起評估的對照組模型目錄。**在同一次解凍裡評估多個模型是刻意的**——"
+        "「無因次化改善外推」這個宣稱需要 direct 與 residual 在同一份 holdout 上的數字，"
+        "分兩次跑就變成看了兩次。要比什麼在解凍前就決定好，一次看完",
+    )
     p.add_argument("--data", type=Path, default=Path("data/processed/v1.npz"))
     p.add_argument("--pools", type=Path, default=Path("data/processed/pools_v1.npz"))
     p.add_argument("--runs-dir", type=Path, default=Path("runs"))
@@ -63,12 +72,18 @@ def main(argv: list[str] | None = None) -> int:
     ds = dataset.load(args.data)
     pools_frozen = dataset.load(args.pools).split("frozen")
 
-    ood_report: dict[str, dict] = {}
-    for name in ds.regime_names[1:]:
-        sub = ds.regime(name)
-        pred = model.predict(sub)
-        m = evaluate_fields(pred, sub.temperature.astype(np.float64))
-        ood_report[name] = m.as_dict()
+    def ood_of(m) -> dict[str, dict]:
+        out = {}
+        for name in ds.regime_names[1:]:
+            sub = ds.regime(name)
+            out[name] = evaluate_fields(m.predict(sub), sub.temperature.astype(np.float64)).as_dict()
+        return out
+
+    ood_report = ood_of(model)
+    comparisons = {}
+    for extra in args.also:
+        other = NeuralPredictor.load(Path(extra) / "model.pt")
+        comparisons[other.name] = ood_of(other)
 
     # in-distribution 的對照：同一個模型在 id 上的分數。champion 是在全部 id 上 fit 的，
     # 所以這個數字是**樂觀的**（模型看過這些列）——它只用來當外推退化的比例尺，
@@ -90,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         "champion_dir": str(args.champion),
         "data_sha256": ds.manifest["array_sha256"]["temperature"],
         "ood": ood_report,
+        "ood_comparisons": comparisons,
         "id_refit_reference": id_fit.as_dict(),
         "pool_frozen": pool_metrics.as_dict(),
         "pool_frozen_recall_mean": recall_mean,
@@ -114,6 +130,13 @@ def main(argv: list[str] | None = None) -> int:
             "  %-12s field_MAE %6.3f  Tmax_MAE %6.3f  bias %+7.3f  under %5.1f%%"
             % (name, m["field_mae"], m["tmax_mae"], m["tmax_bias"], 100 * m["under_rate"])
         )
+    for other_name, rep in comparisons.items():
+        print(f"  -- 對照 {other_name} --")
+        for name, m in rep.items():
+            print(
+                "  %-12s field_MAE %6.3f  Tmax_MAE %6.3f  bias %+7.3f  under %5.1f%%"
+                % (name, m["field_mae"], m["tmax_mae"], m["tmax_bias"], 100 * m["under_rate"])
+            )
     print(f"  pool-frozen  recall@10/60 {recall_mean:.3f} +- {recall_std:.3f}   {pool_metrics.summary()}")
     return 0
 

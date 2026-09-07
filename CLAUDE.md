@@ -57,12 +57,22 @@ uv venv --python 3.11              # .venv/Scripts/python（Windows 是 Scripts 
 uv pip install -r requirements.txt
 ```
 
+Windows 主控台預設 cp950，跑任何會印中文的指令前加 `PYTHONIOENCODING=utf-8`
+（檔案是 UTF-8，壞的只有顯示，但看不懂的錯誤訊息會浪費一輪除錯）。
+
 | 要做什麼 | 指令 |
 |---|---|
 | 跑測試 | `.venv/Scripts/python -m pytest -q` |
 | 生資料集 | `.venv/Scripts/python -m thermoforge.data.generate --config configs/dataset_v1.yaml` |
-| 跑一次實驗 | `.venv/Scripts/python -m thermoforge.train --config configs/<exp>.yaml` |
-| 解凍 OOD holdout | `.venv/Scripts/python -m thermoforge.eval.frozen --confirm` |
+| 生篩選候選池 | `.venv/Scripts/python -m thermoforge.data.pools --config configs/pools_v1.yaml` |
+| 快取物理基準場 | `.venv/Scripts/python -m thermoforge.precompute_greens --data data/processed/v1.npz` |
+| 跑全部實驗 | `bash scripts/run_experiments.sh` |
+| 跑一次實驗 | `.venv/Scripts/python -m thermoforge.experiments --model unet --variant residual --hypothesis ... --change ...` |
+| 定版 champion | `.venv/Scripts/python -m thermoforge.champion --variant residual` |
+| 解凍 frozen holdout | `.venv/Scripts/python -m thermoforge.frozen --confirm` |
+| 設計副駕 | `.venv/Scripts/python -m thermoforge.copilot --demo` |
 
 `--confirm` 不是禮貌性確認，是第 2 條的機械化：holdout 每被解凍一次就寫一筆到
 `runs/frozen_ledger.jsonl`，超過一次就要在 PR 裡解釋為什麼。
+
+`--hypothesis` 與 `--change` 是必填，理由見 `thermoforge/experiments.py`。

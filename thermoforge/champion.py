@@ -41,6 +41,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--under-weight", type=float, default=1.0)
     p.add_argument("--data", type=Path, default=Path("data/processed/v1.npz"))
     p.add_argument("--out", type=Path, default=Path("runs/champion"))
+    p.add_argument(
+        "--skip-oof",
+        action="store_true",
+        help="只做 final fit，不跑 OOF，也不產校準檔。用在 frozen 比較用的對照組——"
+        "它們不需要校準，而 OOF 佔了這支程式六分之五的時間",
+    )
     return p
 
 
@@ -59,6 +65,15 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     t0 = time.perf_counter()
+
+    if args.skip_oof:
+        final = make()
+        final.fit(ds)
+        args.out.mkdir(parents=True, exist_ok=True)
+        final.save(args.out / "model.pt")
+        print(f"{final.name} → {args.out}/model.pt  {time.perf_counter() - t0:.0f}s（跳過 OOF，無校準檔）")
+        return 0
+
     oof, per_fold = run_oof(make, ds)
     truth = ds.temperature.astype(np.float64)
     overall = evaluate_fields(oof, truth)
