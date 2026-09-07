@@ -305,6 +305,18 @@ Windows 主控台預設 cp950，跑會印中文的指令前加 `PYTHONIOENCODING
 | 專案詞彙的精確定義 | [CONTEXT.md](CONTEXT.md) |
 | 這一輪撞出來的領悟 | [docs/lessons/INDEX.md](docs/lessons/INDEX.md) |
 
+## 這一輪撞出來的四則領悟
+
+`.claude/` 的核心規則第 6 條：一輪工作結束時，判斷有沒有「下一輪會再用到、
+而且這次是撞出來才知道的」東西。這一輪有四則：
+
+| | 一句話 |
+|---|---|
+| [L0001](docs/lessons/0001-metric-saturation-needs-a-cheating-baseline.md) | 決策型指標定案前，先寫一個**作弊 baseline** 去打它——打得動就是指標壞了。飽和有兩端：太鬆（作弊能贏）與太緊（最好的模型打到頂），兩端都要檢查 |
+| [L0002](docs/lessons/0002-physical-plausibility-belongs-in-the-parameterisation.md) | 合成資料的物理合理性要在**參數化**裡解決。過濾樣本＝對 target 做篩選，會讓驗證集不再代表推論分佈，而且樂觀的幅度量不出來 |
+| [L0003](docs/lessons/0003-bootstrap-template-and-checker-disagree.md) | 上游缺陷：Serendipity 的 `templates/CONTEXT.md` 照著填，過不了它自己的 `bootstrap_check.sh` |
+| [L0004](docs/lessons/0004-integral-properties-are-learned-local-ones-are-not.md) | 代理模型會學到解的**積分性質**（守恆、極值），不會學到**局部微分性質**——所以它不是可微分的求解器 |
+
 ## 工程紀律從哪來
 
 `.claude/` 是 [Serendipity-Epiphany](https://github.com/cdexswzaq0110/Serendipity-Epiphany)
