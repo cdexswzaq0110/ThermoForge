@@ -26,7 +26,12 @@ from dataclasses import asdict, dataclass
 
 import numpy as np
 
-__all__ = ["FieldMetrics", "evaluate_fields", "screening_recall_at_k"]
+__all__ = [
+    "FieldMetrics",
+    "evaluate_fields",
+    "screening_recall_at_k",
+    "screening_recall_within_pools",
+]
 
 #: 低估容忍值（°C）。小於這個幅度的低估不計入 under_rate——
 #: 求解器本身的網格離散化誤差就在這個量級，把它算成模型缺陷會製造假訊號。
@@ -126,3 +131,36 @@ def screening_recall_at_k(
         recalls[t] = len(set(chosen.tolist()) & set(best.tolist())) / k
 
     return float(recalls.mean()), float(recalls.std())
+
+
+def screening_recall_within_pools(
+    pred_tmax: np.ndarray,
+    true_tmax: np.ndarray,
+    pool_id: np.ndarray,
+    k: int = 10,
+) -> tuple[float, float]:
+    """主要 metric 的**正式**版本：在候選池內算召回率，回傳跨池的 (平均, 標準差)。
+
+    與 `screening_recall_at_k` 的差別不是實作細節，是效度。後者從一個混合了
+    不同板子、不同功率、不同散熱條件的資料集裡隨機抽 pool，於是「哪一列比較涼」
+    大部分由 P/(h·A) 決定——一個完全不看佈局的公式在那裡能拿到 0.6
+    【已確認：見 thermoforge/data/pools.py 的實測數字】。
+
+    候選池內那些條件全部固定，所以這個函式量到的只剩佈局。**報告主要 metric 一律用這一個。**
+    """
+    pred_tmax = np.asarray(pred_tmax).ravel()
+    true_tmax = np.asarray(true_tmax).ravel()
+    pool_id = np.asarray(pool_id).ravel()
+    if not (pred_tmax.shape == true_tmax.shape == pool_id.shape):
+        raise ValueError("pred_tmax、true_tmax 與 pool_id 長度必須一致")
+
+    recalls = []
+    for pid in np.unique(pool_id):
+        idx = np.flatnonzero(pool_id == pid)
+        kk = min(k, len(idx))
+        chosen = set(idx[np.argsort(pred_tmax[idx], kind="stable")[:kk]].tolist())
+        best = set(idx[np.argsort(true_tmax[idx], kind="stable")[:kk]].tolist())
+        recalls.append(len(chosen & best) / kk)
+
+    arr = np.asarray(recalls)
+    return float(arr.mean()), float(arr.std())

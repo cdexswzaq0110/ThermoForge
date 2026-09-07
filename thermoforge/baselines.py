@@ -34,7 +34,12 @@ import numpy as np
 from scipy.signal import fftconvolve
 from scipy.special import k0, k1
 
-__all__ = ["greens_kernel", "greens_temperature", "MeanFieldBaseline"]
+__all__ = [
+    "greens_kernel",
+    "greens_temperature",
+    "greens_theta_norm",
+    "MeanFieldBaseline",
+]
 
 
 def greens_kernel(ny: int, nx: int, m: float, dy: float, dx: float) -> np.ndarray:
@@ -124,3 +129,36 @@ class MeanFieldBaseline:
         if self.mean_theta_ is None:
             raise RuntimeError("尚未 fit")
         return self.mean_theta_[None, :, :] + t_amb[:, None, None]
+
+
+def greens_theta_norm(
+    p_norm: np.ndarray, m_ly: float, m_lx: float, images: int = 1
+) -> np.ndarray:
+    """無因次版本的物理基準：(p_norm, m·Ly, m·Lx) → θ/θ_ref。
+
+    把 θ = G * (p/kt) 代進 θ_norm = θ·h·A/P 之後，kt、h、P、板子絕對尺寸
+    全部消掉，只剩下 m·dx 與 m·dy 兩個無因次格距：
+
+        θ_norm = Σⱼ p_normⱼ · (m·dx)(m·dy) · K₀(|ũᵢ − ũⱼ|) / (2π)
+
+    這不只是省一次乘除。它讓物理基準可以在**代理模型的座標系裡**直接算出來，
+    於是「學物理基準的殘差」變成一個乾淨的 image-to-image 問題，
+    不需要為了算基準而把樣本還原成有因次的量再轉回去。
+    """
+    ny, nx = p_norm.shape
+    mdy, mdx = m_ly / ny, m_lx / nx
+
+    iy = np.arange(-(3 * ny - 1), 3 * ny)[:, None] * mdy
+    ix = np.arange(-(3 * nx - 1), 3 * nx)[None, :] * mdx
+    r = np.hypot(iy, ix)
+    kernel = np.empty_like(r)
+    off = r > 0.0
+    kernel[off] = mdx * mdy * k0(r[off]) / (2.0 * np.pi)
+    a = np.sqrt(mdx * mdy / np.pi)
+    kernel[~off] = 1.0 - a * k1(a)
+
+    if images == 0:
+        centre = kernel[2 * ny - 1 : 4 * ny - 1, 2 * nx - 1 : 4 * nx - 1]
+        return fftconvolve(p_norm, centre, mode="same")
+    ext = _mirror_extend(p_norm)
+    return fftconvolve(ext, kernel, mode="same")[ny : 2 * ny, nx : 2 * nx]

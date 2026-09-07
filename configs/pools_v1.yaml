@@ -1,0 +1,15 @@
+# ThermoForge 篩選候選池 v1
+#
+# 一個池 = 一次真實的設計迭代：板子、元件清單、功率預算、散熱方案全部固定，
+# 只有元件擺放在變。為什麼主要 metric 只能在這種池上算，見 thermoforge/data/pools.py。
+
+name: pools_v1
+seed: 20260907
+
+grid:
+  ny: 64
+  nx: 64
+
+n_pools_dev: 20        # 開發期可反覆看
+n_pools_frozen: 20     # 與 OOD holdout 一起解凍，整個專案看一次
+variants_per_pool: 60
